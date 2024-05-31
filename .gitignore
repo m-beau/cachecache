@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*~
+*swo
+*swp
+.*.sw*
+*~
+cachecache.egg-info/*
+dist/*
+build/*
+spk_wvf2.py
+.vscode/*
+.DS_Store
+.ipynb_checkpoints/*
+.virtual_documents/*
