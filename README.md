@@ -1,7 +1,7 @@
 # cachecache: supercharge your Python functions with flexible, runtime-configurable caching! 🚀
 
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 
 A Python package that provides a simple and customizable way to cache function results and alter caching behavior at runtime.
 
