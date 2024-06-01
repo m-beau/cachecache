@@ -1,4 +1,4 @@
-# cachecache: supercharge your Python functions with flexible, runtime-configurable caching! 🚀
+# cachecache: supercharge your Python functions with flexible, runtime-configurable caching.
 
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
 [![License: MIT](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
@@ -7,7 +7,7 @@ A Python package that provides a simple and customizable way to cache function r
 
 ## Features
 
-- Effortless 1-liner caching with a decorator: @cache
+- 1-liner caching with a decorator: @cache
 - Caching behavior can be customized on the fly for specific function calls, by passing the following arguments to the cached functions:
     - 🔄 "again=True": recompute and overwrite cached results on-demand
     - ⏸️ "cache_results=False": disable caching for specific function calls, for instance if the computed result would take too much room on disk.
@@ -66,13 +66,13 @@ Recompute results and overwrite cache:
 ```python
 result = my_cached_function(arg, again=True)
 ```
-This proves very useful if the results depend on data that can change on disk (this information is not present in the arguments of the function, so the cacher does not know about it!)
+This proves useful if the results depend on data that can change on disk (this information is not present in the arguments of the function, so the cacher does not know about it!)
 
 Adjust caching directory at runtime
 ```python
 result = my_cached_function(arg, cache_path="somewhere/else")
 ```
-This proves very useful if you need to distribute the cached results of a function across several disks! For instance, it is possible to create a wrapper around Cacher that exploits this capability to cache data in a place specified by any argument, such as `datapath`:
+This proves useful if you need to distribute the cached results of a function across several disks! For instance, it is possible to create a wrapper around Cacher that exploits this capability to cache data in a place specified by any argument, such as `datapath`:
 
 ```python
 global_cacher = Cacher('~/.global_cache')
