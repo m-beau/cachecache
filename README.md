@@ -1,7 +1,7 @@
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 
-# cachecache: Python function decorator for runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="120" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
+# cachecache: Python function decorator for runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="130" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
 
 A Python package that provides a simple way to cache function results while allowing to dynamically customize caching behavior at each function call.
 
