@@ -1,7 +1,7 @@
-# cachecache: decorate your Python functions with flexible, runtime-configurable caching.
-
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
-[![License: MIT](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
+[![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
+
+# cachecache: decorate your Python functions with flexible, runtime-configurable caching. <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
 
 A Python package that provides a simple and customizable way to cache function results and alter caching behavior at runtime.
 
@@ -106,7 +106,7 @@ def distributed_cacher(func):
 
 ## License
 
-This project is licensed under the terms of the [GNU GENERAL PUBLIC LICENSE](https://opensource.org/license/gpl-3-0). You may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions.
+This project is licensed under the terms of the [GNU General Public License v3.0](https://opensource.org/license/gpl-3-0). You may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions.
 
 ## Support
 
