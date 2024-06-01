@@ -3,12 +3,12 @@
 
 # cachecache: Python function decorator for runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
 
-A Python package that provides a simple way to cache function results while allowing to dynamically customize caching behavior at each function call.
+A Python package that provides a simple way to cache function results while allowing to dynamically configure caching behavior at each function call.
 
-By "caching behavior", we mean:
-1) whether to recompute results and overwrite the cache, which is useful for functions whose results rely on data that can change on disk and isn't included in the function arguments;
-2) whether to cache the results, which is useful for functions who may need caching in context A (e.g. frontend recurrent use) but not context B (e.g. backend unique use);
-3) where to save the cached results, which is useful for functions that return voluminous data, as this allows to distribute their cache across several locations given different arguments.
+By "caching behavior" reconfigurable at each function call, we mean:
+1) Whether to recompute results and overwrite the cache, which is useful for functions whose results rely on data loaded internally (therefore hidden from the function arguments, thus from the cache hash) and that can change on disk;
+2) Whether to cache the results, which is useful for functions who may need caching in context A (e.g. frontend recurrent use) but not context B (e.g. backend unique use);
+3) Where to save the cached results, which is useful for functions that return voluminous data, as this allows to distribute their cache across several locations given different arguments.
 
 ## Features
 
