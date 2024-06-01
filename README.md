@@ -47,24 +47,12 @@ result = my_cached_function(arg)  # potentially slow
 result = my_cached_function(arg)  # always fast (results loaded from cache)
 ```
 
-Cache using a custom directory and maximum cache size of 10GB:
+Cache using a custom directory and maximum cache size:
 ```python
-@Cacher("my/custom/caching/path", 10e9) # size in bytes
+cacher = Cacher("my/custom/caching/path", 10e9) # size in bytes - 10GB
+@cacher
 def my_cached_function(...):
     ...
-```
-
-Use a single cacher for multiple functions:
-```python
-cacher = Cacher("my/custom/caching/path", 10e9)
-
-@cacher
-def foo1(x):
-    return x ** 2
-
-@cacher
-def foo2(x):
-    return x / 10
 ```
 
 Recompute results and overwrite cache:
@@ -114,6 +102,29 @@ def my_cached_function(datapath, ...):
     """
     A function with results cached at 'datapath/.local_cache'
     """
+    ...
+```
+
+Of course, you can use a single cacher for multiple functions:
+```python
+@cacher
+def foo1(x):
+    return x ** 2
+
+@cacher
+def foo2(x):
+    return x / 10
+```
+
+And both of these syntaxes are possible:
+```python
+cacher = Cacher("my/custom/caching/path")
+@cacher
+def my_cached_function(...):
+    ...
+
+@Cacher("my/custom/caching/path")
+def my_cached_function(...):
     ...
 ```
 
