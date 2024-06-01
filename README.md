@@ -14,9 +14,9 @@ By "caching behavior" reconfigurable at each function call, we mean:
 
 - 1-liner caching with a decorator: @cache
 - Caching behavior can be customized on the fly for specific function calls, by passing the following arguments to the cached functions:
-    - 🔄 "again=True": recompute and overwrite cached results on-demand
-    - ⏸️ "cache_results=False": disable caching for specific function calls, for instance if the computed result would take too much room on disk.
-    - 📁 "cache_path='different/caching/path' ": use custom cache locations for specific function calls
+    - 🔄 `again=True`: recompute and overwrite cached results on-demand
+    - ⏸️ `cache_results=False`: disable caching for specific function calls, for instance if the computed result would take too much room on disk.
+    - 📁 `cache_path='different/caching/path'`: use custom cache locations for specific function calls
 - Built on joblib's [Memory](https://joblib.readthedocs.io/en/latest/generated/joblib.Memory.html) class.
 
 ## Installation
