@@ -1,9 +1,9 @@
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 
-# cachecache: decorate your Python functions with flexible, runtime-configurable caching. <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
+# cachecache: supercharge your Python functions with flexible, runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
 
-A Python package that provides a simple and customizable way to cache function results and alter caching behavior at runtime.
+A Python package that provides a simple and customizable way to cache function results while altering caching behavior at runtime.
 
 ## Features
 
@@ -102,6 +102,14 @@ def distributed_cacher(func):
         return results
 
     return locally_cached_func
+
+# You can then decorate a function as follow:
+@distributed_cacher
+def my_cached_function(datapath, ...):
+    """
+    A function with results cached at 'datapath/.local_cache'
+    """
+    ...
 ```
 
 ## License
