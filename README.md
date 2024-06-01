@@ -1,5 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
+[![Downloads](https://static.pepy.tech/badge/cachecache)](https://pepy.tech/project/cachecache)
 
 # cachecache: Python function decorator for runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
 
