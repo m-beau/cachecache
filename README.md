@@ -1,4 +1,4 @@
-# cachecache: supercharge your Python functions with flexible, runtime-configurable caching.
+# cachecache: decorate your Python functions with flexible, runtime-configurable caching.
 
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
 [![License: MIT](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
