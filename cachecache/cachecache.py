@@ -321,16 +321,21 @@ def make_arg_kwargs_dic(func, args, kwargs):
     """
 
     sig = inspect.signature(func)
-    # arguments are those whose default value is empty
-    arg_names = [
-        param.name
-        for param in sig.parameters.values()
-        if param.default == inspect.Parameter.empty
-    ]
+    # arguments are those whose 
+    # - default value is empty and which are not provided as keyword arguments,
+    # - or whose default value is not empty
+    arg_kwarg_names = [param.name for param in sig.parameters.values()]
+    wrong_kwargs = [name for name in kwargs.keys() if name not in arg_kwarg_names]
+    assert len(wrong_kwargs) == 0,\
+        f"{func.__name__}() got >=1 unexpected keyword argument(s): {wrong_kwargs}"
 
-    args_kwargs = kwargs.copy()
-    for i, variable_name in enumerate(arg_names):
-        args_kwargs[variable_name] = args[i]
-        args_kwargs[variable_name + "_arg_index"] = i
+    
+    # Add arguments PASSED as positional arguments, in args
+    # (they can be defined as positional or keyword arguments!)
+    args_kwargs = kwargs.copy() # Initialize with kwargs
+    for i, value in enumerate(args):
+        name = arg_kwarg_names[i]
+        args_kwargs[name] = value
+        args_kwargs[name + "_arg_index"] = i
 
     return args_kwargs
