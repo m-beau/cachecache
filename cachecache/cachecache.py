@@ -172,8 +172,7 @@ class Cacher:
 
 
 def instanciate_joblib_cache(
-    path: int,
-    caching_memory_allocation: Union[int, None] = None
+    path: int, caching_memory_allocation: Union[int, None] = None
 ):
     """
     Initialize joblib cache Memory object at 'path',
@@ -203,10 +202,10 @@ def instanciate_joblib_cache(
     if free_memory_bytes * 1e-9 < 5:
         print(
             (
-            f"WARNING less than 5GB free at {str(path)} - "
-            "caching will quickly fill up the remaining space "
-            "(allowed all available space minus 1GB "
-            f"(i.e. {caching_memory_allocation*1e-9}GB))."
+                f"WARNING less than 5GB free at {str(path)} - "
+                "caching will quickly fill up the remaining space "
+                "(allowed all available space minus 1GB "
+                f"(i.e. {caching_memory_allocation*1e-9}GB))."
             )
         )
 
@@ -320,22 +319,26 @@ def make_arg_kwargs_dic(func, args, kwargs):
         - args_kwargs: dictionnary holding boths args and kwargs.
     """
 
+    # Get function signature
     sig = inspect.signature(func)
-    # arguments are those whose 
-    # - default value is empty and which are not provided as keyword arguments,
-    # - or whose default value is not empty
+
+    # Identify all positional and keyword arguments
     arg_kwarg_names = [param.name for param in sig.parameters.values()]
     wrong_kwargs = [name for name in kwargs.keys() if name not in arg_kwarg_names]
-    assert len(wrong_kwargs) == 0,\
-        f"{func.__name__}() got >=1 unexpected keyword argument(s): {wrong_kwargs}"
+    assert (
+        len(wrong_kwargs) == 0
+    ), f"{func.__name__}() got >=1 unexpected keyword argument(s): {wrong_kwargs}"
 
-    
     # Add arguments PASSED as positional arguments, in args
-    # (they can be defined as positional or keyword arguments!)
-    args_kwargs = kwargs.copy() # Initialize with kwargs
+    # (they can be defined either as positional or keyword arguments!)
+    args_kwargs = {}
     for i, value in enumerate(args):
         name = arg_kwarg_names[i]
         args_kwargs[name] = value
         args_kwargs[name + "_arg_index"] = i
+
+    # Add arguments PASSED as keyword arguments, in kwargs
+    # (they can be defined either as positional or keyword arguments!)
+    args_kwargs = {**args_kwargs, **kwargs}
 
     return args_kwargs
