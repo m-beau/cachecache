@@ -8,6 +8,7 @@ import inspect
 
 from cachecache.CONFIG import default_cache_path
 
+
 class Cacher:
     """
     Class embedding a decorator to cache any function at 'cache_path' ("~/.cachecache" by default).
@@ -37,10 +38,10 @@ class Cacher:
                              (if False, does not attempt to load form cache either)
             - cache_path: None|str, set alternative path to cache directory at run time
             '''
-            
+
             # complex operations involving args...
             results = ...
-    
+
             return results
 
         # for caching at "my/custom/caching/path",
@@ -78,8 +79,8 @@ class Cacher:
     so it is better practice to instanciate a single cacher to use across functions
     rather than resorting to using the 'cache_path' argument at run time,
     especially for functions that are intented to be called many times.
-    
- 
+
+
     *** Arguments ***
         - cache_path: directory to cache the results of functions decorated with cacher = Cacher().
         - caching_memory_allocation: int, max size of cache in bytes.
@@ -88,20 +89,24 @@ class Cacher:
         - cacher: the caching decorator.
     """
 
-    def __init__(self,
-                 cache_path: Union[str, Path] = default_cache_path,
-                 caching_memory_allocation: Union[int, None] = None
-                ):
-        self.global_cache_memory = instanciate_joblib_cache(cache_path,
-                                                         caching_memory_allocation)
+    def __init__(
+        self,
+        cache_path: Union[str, Path] = default_cache_path,
+        caching_memory_allocation: Union[int, None] = None,
+    ):
+        self.global_cache_memory = instanciate_joblib_cache(
+            cache_path, caching_memory_allocation
+        )
         self.input_caching_memory_allocation = caching_memory_allocation
 
     def __repr__(self):
-        path = self.global_cache_memory.__repr__().split('=')[-1][:-1]
-        memo = round(self.global_cache_memory.caching_memory_allocation*1e-9, 3)
-        return ("Instance of Cacher from the cachecache package, \n"
-                f"caching data at {path} unless specified with 'cache_path' at run time by the decorated function, \n"
-                f"with a maximum allocation of {memo}GB.")
+        path = self.global_cache_memory.__repr__().split("=")[-1][:-1]
+        memo = round(self.global_cache_memory.caching_memory_allocation * 1e-9, 3)
+        return (
+            "Instance of Cacher from the cachecache package, \n"
+            f"caching data at {path} unless specified with 'cache_path' at run time by the decorated function, \n"
+            f"with a maximum allocation of {memo}GB."
+        )
 
     def __call__(self, func):
         return self._decorator(func)
@@ -110,7 +115,7 @@ class Cacher:
         """
         Decorator to cache any function at cache_path,
         with a memory allocation of caching_memory_allocation.
-        
+
         Importantly, the cache behaviour can be altered by
         the following optional function arguments at run time:
             - again: bool, whether to recompute and overwrite the cached results
@@ -119,54 +124,57 @@ class Cacher:
                              (if False, does not attempt to load form cache either)
             - cache_path: None|str, set alternative path to cache directory at run time
         """
-        assert callable(func_to_cache), f'{func_to_cache} is not callable!'
-        
+        assert callable(func_to_cache), f"{func_to_cache} is not callable!"
+
         @functools.wraps(func_to_cache)
         def cached_func(*args, **kwargs):
-            
+
             # Pull arguments that alter caching behavior
-            cache_results = kwargs.get('cache_results', True)
-            again = kwargs.get('again', False)
-            cache_path = kwargs.get('cache_path', None)
-            
+            cache_results = kwargs.get("cache_results", True)
+            again = kwargs.get("again", False)
+            cache_path = kwargs.get("cache_path", None)
+
             # If cache_results is False, return the function unaltered
             if not cache_results:
                 return func_to_cache(*args, **kwargs)
-    
+
             # Define cache, global or custom
             if cache_path is None:
                 cache_memory = self.global_cache_memory
             else:
                 # no way to customize the allocated cache memory for cache initialized at function run time
-                cache_memory = instanciate_joblib_cache(cache_path,
-                                                     caching_memory_allocation=None)
-            
+                cache_memory = instanciate_joblib_cache(
+                    cache_path, caching_memory_allocation=None
+                )
+
             # Cache function, ignoring arguments that alter caching behavior
-            arguments_to_ignore = [k for k in ["again",
-                                            "cache_results",
-                                            "cache_path"]
-                                   if k in kwargs]
-            func_to_cache_cached = cache_memory.cache(func_to_cache,
-                                                      ignore=arguments_to_ignore)
-    
+            arguments_to_ignore = [
+                k for k in ["again", "cache_results", "cache_path"] if k in kwargs
+            ]
+            func_to_cache_cached = cache_memory.cache(
+                func_to_cache, ignore=arguments_to_ignore
+            )
+
             # Reload or recompute results
             mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
-            
+
             # If again is True, clear the cache to enforce recomputing the results
             if again:
                 mem.clear()
-    
+
             # Reload results (or recompute them if again was True)
             mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
             results = mem.get()
-    
+
             return results
-    
+
         return cached_func
 
 
-def instanciate_joblib_cache(path: int,
-                          caching_memory_allocation: Union[int, None] = None):
+def instanciate_joblib_cache(
+    path: int,
+    caching_memory_allocation: Union[int, None] = None
+):
     """
     Initialize joblib cache Memory object at 'path',
     with a size limit of caching_memory_allocation bytes.
@@ -176,9 +184,11 @@ def instanciate_joblib_cache(path: int,
     # Format and process path
     path = Path(path).expanduser()
     if not path.parent.exists():
-        error = (f"WARNING you attempted to cache your results at {str(path)}, "
-                  "but the parent directory doesn't exist! Change your target cache, "
-                 f"or create {str(path.parent)}.")
+        error = (
+            f"WARNING you attempted to cache your results at {str(path)}, "
+            "but the parent directory doesn't exist! Change your target cache, "
+            f"or create {str(path.parent)}."
+        )
         raise ValueError(error)
     path.mkdir(exist_ok=True)
 
@@ -189,24 +199,32 @@ def instanciate_joblib_cache(path: int,
     free_memory_bytes = psutil.disk_usage(path).free
     if caching_memory_allocation is None:
         caching_memory_allocation = int(free_memory_bytes - 1e9)
-        
+
     if free_memory_bytes * 1e-9 < 5:
-        print((f"WARNING less than 5GB free at {str(path)} - "
-                "caching will quickly fill up the remaining space "
-                "(allowed all available space minus 1GB "
-               f"(i.e. {caching_memory_allocation*1e-9}GB))."))
+        print(
+            (
+            f"WARNING less than 5GB free at {str(path)} - "
+            "caching will quickly fill up the remaining space "
+            "(allowed all available space minus 1GB "
+            f"(i.e. {caching_memory_allocation*1e-9}GB))."
+            )
+        )
 
     memory.caching_memory_allocation = caching_memory_allocation
     memory.reduce_size(bytes_limit=caching_memory_allocation)
 
     return memory
 
+
 # cachecache default global cache
 cache = Cacher(default_cache_path)
 
-def distributed_cacher(datapath_arg_name: str = 'datapath',
-                       local_cache_path: str = ".local_cache",
-                       global_cache: Optional[Cacher] = None):
+
+def distributed_cacher(
+    datapath_arg_name: str = "datapath",
+    local_cache_path: str = ".local_cache",
+    global_cache: Optional[Cacher] = None,
+):
     """
     Decorator to cache the results of a function using a distributed caching strategy.
 
@@ -242,10 +260,10 @@ def distributed_cacher(datapath_arg_name: str = 'datapath',
 
         my_func('/path/to/data', other_args)
         # Results will be cached at '/path/to/data/.cache'
-        
+
         my_func('/another/path/to/data', other_args)
         # Results will be cached at '/another/path/to/data/.cache'
-        
+
         my_func(other_args)
         # Results will be cached at '~/.global_cache'
     """
@@ -254,6 +272,7 @@ def distributed_cacher(datapath_arg_name: str = 'datapath',
 
     def decorator(func):
         "Simple nested wrapper allowing to pass arguments to @distributed_cacher."
+
         @functools.wraps(func)
         def locally_cached_func(*args, **kwargs):
 
@@ -268,19 +287,19 @@ def distributed_cacher(datapath_arg_name: str = 'datapath',
                     new_cache_path = Path(datapath) / local_cache_path
                     # if 'cache_path' also passed to function,
                     # cache_path still prevails.
-                    if 'cache_path' in kwargs:
-                        if kwargs['cache_path'] is None:
-                            kwargs['cache_path'] = new_cache_path
-                    elif 'cache_path' not in kwargs:
-                        kwargs['cache_path'] = new_cache_path
+                    if "cache_path" in kwargs:
+                        if kwargs["cache_path"] is None:
+                            kwargs["cache_path"] = new_cache_path
+                    elif "cache_path" not in kwargs:
+                        kwargs["cache_path"] = new_cache_path
 
-            cached_func = global_cache(func) # same as decorating func with @cache
+            cached_func = global_cache(func)  # same as decorating func with @cache
             results = cached_func(*args, **kwargs)
 
             return results
-        
+
         return locally_cached_func
-    
+
     return decorator
 
 
@@ -303,11 +322,15 @@ def make_arg_kwargs_dic(func, args, kwargs):
 
     sig = inspect.signature(func)
     # arguments are those whose default value is empty
-    arg_names = [param.name for param in sig.parameters.values() if param.default == inspect.Parameter.empty]
+    arg_names = [
+        param.name
+        for param in sig.parameters.values()
+        if param.default == inspect.Parameter.empty
+    ]
 
     args_kwargs = kwargs.copy()
     for i, variable_name in enumerate(arg_names):
         args_kwargs[variable_name] = args[i]
         args_kwargs[variable_name + "_arg_index"] = i
-    
+
     return args_kwargs
