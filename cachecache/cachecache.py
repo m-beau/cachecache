@@ -1,12 +1,12 @@
 from pathlib import Path
 import functools
-from typing import Union
+from typing import Union, Optional
 
 from joblib import Memory
 import psutil
+import inspect
 
 from cachecache.CONFIG import default_cache_path
-
 
 class Cacher:
     """
@@ -92,7 +92,7 @@ class Cacher:
                  cache_path: Union[str, Path] = default_cache_path,
                  caching_memory_allocation: Union[int, None] = None
                 ):
-        self.global_cache_memory = initiate_joblib_cache(cache_path,
+        self.global_cache_memory = instanciate_joblib_cache(cache_path,
                                                          caching_memory_allocation)
         self.input_caching_memory_allocation = caching_memory_allocation
 
@@ -124,29 +124,28 @@ class Cacher:
         @functools.wraps(func_to_cache)
         def cached_func(*args, **kwargs):
             
-            # preformat kwargs
-            arguments_to_ignore = [k for k in ["again",
-                                               "cache_results",
-                                               "cache_path"]
-                                   if k in kwargs]
-            cache_results = kwargs.pop('cache_results', True)
-            again = kwargs.pop('again', False)
-            cache_path = kwargs.pop('cache_path', None)
+            # Pull arguments that alter caching behavior
+            cache_results = kwargs.get('cache_results', True)
+            again = kwargs.get('again', False)
+            cache_path = kwargs.get('cache_path', None)
             
-            # If cache_results is False,
-            # return the function unaltered
+            # If cache_results is False, return the function unaltered
             if not cache_results:
                 return func_to_cache(*args, **kwargs)
     
-            # Cache the function,
-            # eventually at the passed directory cache_path
+            # Define cache, global or custom
             if cache_path is None:
                 cache_memory = self.global_cache_memory
             else:
                 # no way to customize the allocated cache memory for cache initialized at function run time
-                cache_memory = initiate_joblib_cache(cache_path,
+                cache_memory = instanciate_joblib_cache(cache_path,
                                                      caching_memory_allocation=None)
-    
+            
+            # Cache function, ignoring arguments that alter caching behavior
+            arguments_to_ignore = [k for k in ["again",
+                                            "cache_results",
+                                            "cache_path"]
+                                   if k in kwargs]
             func_to_cache_cached = cache_memory.cache(func_to_cache,
                                                       ignore=arguments_to_ignore)
     
@@ -166,7 +165,7 @@ class Cacher:
         return cached_func
 
 
-def initiate_joblib_cache(path: int,
+def instanciate_joblib_cache(path: int,
                           caching_memory_allocation: Union[int, None] = None):
     """
     Initialize joblib cache Memory object at 'path',
@@ -201,3 +200,114 @@ def initiate_joblib_cache(path: int,
     memory.reduce_size(bytes_limit=caching_memory_allocation)
 
     return memory
+
+# cachecache default global cache
+cache = Cacher(default_cache_path)
+
+def distributed_cacher(datapath_arg_name: str = 'datapath',
+                       local_cache_path: str = ".local_cache",
+                       global_cache: Optional[Cacher] = None):
+    """
+    Decorator to cache the results of a function using a distributed caching strategy.
+
+    The decorator caches the results of the decorated function at two levels:
+    1. Global cache: The default global cache is stored at '~/.global_cache'.
+    2. Local cache: If the decorated function has an argument specified by `datapath_arg_name`,
+       the cache is redirected to '{datapath_arg_value}/{local_cache_path}'
+       (by default, 'datapath/.local_cache').
+
+    The global cache is instantiated only once, in the script where this decorator is defined,
+    and shared across all decorated functions.
+    The local cache is specific to each unique value of the `datapath_arg_name` argument.
+
+    Behind the scenes, this works by swapping in the value of the specified argument (datapath_arg_name)
+    instead of the 'cache_path' argument from Cacher (if 'cache_path' is also specified, it takes precedence over 'datapath').
+
+    Arguments:
+        - datapath_arg_name (str, optional): The name of the argument in the decorated function
+            that specifies the datapath for the local cache. Defaults to 'datapath'.
+        - local_cache_path (str, optional): The relative path to the local cache directory
+            within the datapath. Defaults to '.local_cache' (and results cached at f'{datapath}/.local_cache').
+        - global_cache (cachecache.Cacher instance, optional): The global cacher to use by default
+            for cached functions without 'datapath_arg_name' (or when 'datapath_arg_name' is None).
+            Defaults to a cache at '~/.cachecache' (default instance of Cacher()).
+
+    Returns:
+        - function: The decorated function with distributed caching enabled.
+
+    Example:
+        @distributed_cacher(datapath_arg_name='data_dir', local_cache_path='.cache')
+        def my_func(data_dir, other_args): # data_dir can be an arg or a kwarg
+            ...
+
+        my_func('/path/to/data', other_args)
+        # Results will be cached at '/path/to/data/.cache'
+        
+        my_func('/another/path/to/data', other_args)
+        # Results will be cached at '/another/path/to/data/.cache'
+        
+        my_func(other_args)
+        # Results will be cached at '~/.global_cache'
+    """
+    if global_cache is None:
+        global_cache = cache
+
+    def decorator(func):
+        "Simple nested wrapper allowing to pass arguments to @distributed_cacher."
+        @functools.wraps(func)
+        def locally_cached_func(*args, **kwargs):
+
+            args_kwargs = make_arg_kwargs_dic(func, args, kwargs)
+
+            # replace the cache_path argument
+            # with f'{datapath_arg_name}/{local_cache_path}'
+            if datapath_arg_name in args_kwargs:
+                datapath = args_kwargs[datapath_arg_name]
+                # if passed datapath is a sensible path
+                if isinstance(datapath, Union[str, Path]):
+                    new_cache_path = Path(datapath) / local_cache_path
+                    # if 'cache_path' also passed to function,
+                    # cache_path still prevails.
+                    if 'cache_path' in kwargs:
+                        if kwargs['cache_path'] is None:
+                            kwargs['cache_path'] = new_cache_path
+                    elif 'cache_path' not in kwargs:
+                        kwargs['cache_path'] = new_cache_path
+
+            cached_func = global_cache(func) # same as decorating func with @cache
+            results = cached_func(*args, **kwargs)
+
+            return results
+        
+        return locally_cached_func
+    
+    return decorator
+
+
+def make_arg_kwargs_dic(func, args, kwargs):
+    """
+    Make a dictionnary holding boths args and kwargs.
+
+    Adds args as a pair of key/values to the kwargs dictionnary:
+    - one pair where key = arg_name, and value = arg,
+    - one pair where key = arg_name + "_arg_index", and value = arg_index in args
+
+    Arguments:
+        - func: function
+        - args: list of arguments from func
+        - kwargs: dict of keyword arguments from func
+
+    Returns:
+        - args_kwargs: dictionnary holding boths args and kwargs.
+    """
+
+    sig = inspect.signature(func)
+    # arguments are those whose default value is empty
+    arg_names = [param.name for param in sig.parameters.values() if param.default == inspect.Parameter.empty]
+
+    args_kwargs = kwargs.copy()
+    for i, variable_name in enumerate(arg_names):
+        args_kwargs[variable_name] = args[i]
+        args_kwargs[variable_name + "_arg_index"] = i
+    
+    return args_kwargs

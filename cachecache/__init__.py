@@ -1,3 +1,1 @@
-from .cachecache import Cacher
-
-cache = Cacher()
+from .cachecache import *

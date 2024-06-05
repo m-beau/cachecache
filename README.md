@@ -60,51 +60,44 @@ Recompute results and overwrite cache:
 ```python
 result = my_cached_function(arg, again=True)
 ```
-This proves useful if the results depend on data that can change on disk (this information is not present in the arguments of the function, so the cacher does not know about it!)
+This proves useful if the results depend on data that can change on disk (this information is not present in the arguments of the function, so the cacher does not know about it!).
 
 Adjust caching directory at runtime
 ```python
 result = my_cached_function(arg, cache_path="somewhere/else")
 ```
-This proves useful if you need to distribute the cached results of a function across several disks! For instance, it is possible to create a wrapper around Cacher that exploits this capability to cache data in a place specified by any argument, such as `datapath`:
+This proves useful if you need to distribute the cached results of a function across several disks.
 
+cachecache also provides a way to create a `distributed_cacher` that will cache a function's results at a location specified by a custom argument (such as 'datapath'):
 ```python
+from cachecache import Cacher, distributed_cacher
+
 global_cacher = Cacher('~/.global_cache')
 
-def distributed_cacher(func):
-    """
-    Decorator to cache functions using their 'datapath' argument
-    at 'datapath/.local_cache'.
-    """
-    
-    @functools.wraps(func)
-    def locally_cached_func(*args, **kwargs):
-
-        # replace the cache_path argument
-        # with 'datapath/.local_cache'
-        if 'datapath' in kwargs:
-            if isinstance(kwargs['datapath'], Union[str, Path]):
-                cache_path = Path(kwargs['datapath']) / '.local_cache'
-                kwargs['cache_path'] = cache_path
-
-        # the default cache is at '~/.global_cache' and only instantiated once as global_cacher,
-        # but if a function has the datapath parameter,
-        # the cache will instead be redirected to 'datapath/.local_cache'
-        cached_func = global_cacher(func) # same as decorating func with @global_npyx_cacher
-        results = cached_func(*args, **kwargs)
-
-        return results
-
-    return locally_cached_func
+# Arguments of distributed_cacher:
+# - datapath_arg_name (str, optional): The name of the argument in the decorated function
+#     that specifies the datapath for the local cache. Defaults to 'datapath'.
+# - local_cache_path (str, optional): The relative path to the local cache directory
+#     within the datapath. Defaults to '.local_cache' (and results cached at f'{datapath}/.local_cache').
+# - global_cache (cachecache.Cacher instance, optional): The global cacher to use by default
+#     for cached functions without 'datapath_arg_name' (or when 'datapath_arg_name' is None).
+#     Defaults to a cache at '~/.cachecache' (default instance of Cacher()).
+dist_cacher = distributed_cacher(datapath_arg_name='datapath',
+                                local_cache_path='.local_cache',
+                                global_cache=global_cacher)
 
 # You can then decorate a function as follow:
-@distributed_cacher
-def my_cached_function(datapath, ...):
+@dist_cacher
+def my_distributed_cached_function(datapath, ...):
     """
-    A function with results cached at 'datapath/.local_cache'
+    A function whose results will be cached at 'datapath/.local_cache'
+    unless specified otherwise with the cache_path argument.
+
+    Note: works with args and kwargs
     """
     ...
 ```
+Behind the scenes, this works by swapping in the value of the specified argument (datapath_arg_name) instead of the 'cache_path' argument from Cacher (if 'cache_path' is also specified, it takes precedence over 'datapath').
 
 Of course, you can use a single cacher for multiple functions:
 ```python
