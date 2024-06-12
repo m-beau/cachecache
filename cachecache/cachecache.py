@@ -148,8 +148,10 @@ class Cacher:
                 )
 
             # Cache function, ignoring arguments that alter caching behavior
+            # only if they exist in the function signature
+            arg_kwargs = make_arg_kwargs_dic(func_to_cache, args, kwargs)
             arguments_to_ignore = [
-                k for k in ["again", "cache_results", "cache_path"] if k in kwargs
+                k for k in ["again", "cache_results", "cache_path"] if k in arg_kwargs
             ]
             func_to_cache_cached = cache_memory.cache(
                 func_to_cache, ignore=arguments_to_ignore
@@ -275,12 +277,12 @@ def distributed_cacher(
         @functools.wraps(func)
         def locally_cached_func(*args, **kwargs):
 
-            args_kwargs = make_arg_kwargs_dic(func, args, kwargs)
+            arg_kwargs = make_arg_kwargs_dic(func, args, kwargs)
 
             # replace the cache_path argument
             # with f'{datapath_arg_name}/{local_cache_path}'
-            if datapath_arg_name in args_kwargs:
-                datapath = args_kwargs[datapath_arg_name]
+            if datapath_arg_name in arg_kwargs:
+                datapath = arg_kwargs[datapath_arg_name]
                 # if passed datapath is a sensible path
                 if isinstance(datapath, Union[str, Path]):
                     new_cache_path = Path(datapath) / local_cache_path
@@ -289,7 +291,7 @@ def distributed_cacher(
                     if "cache_path" in kwargs:
                         if kwargs["cache_path"] is None:
                             kwargs["cache_path"] = new_cache_path
-                    elif "cache_path" not in kwargs:
+                    else:
                         kwargs["cache_path"] = new_cache_path
 
             cached_func = global_cache(func)  # same as decorating func with @cache
@@ -340,5 +342,11 @@ def make_arg_kwargs_dic(func, args, kwargs):
     # Add arguments PASSED as keyword arguments, in kwargs
     # (they can be defined either as positional or keyword arguments!)
     args_kwargs = {**args_kwargs, **kwargs}
+
+    # Add keyword arguments NOT PASSED, with default values
+    for name, param in sig.parameters.items():
+        if (name not in args_kwargs) and \
+           (param.default is not inspect.Parameter.empty):
+            args_kwargs[name] = param.default
 
     return args_kwargs
