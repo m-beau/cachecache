@@ -197,7 +197,7 @@ def instanciate_joblib_cache(
     memory = Memory(path, verbose=0)
 
     # Limit cache size
-    free_memory_bytes = psutil.disk_usage(path).free
+    free_memory_bytes = psutil.disk_usage(str(path)).free
     if caching_memory_allocation is None:
         caching_memory_allocation = int(free_memory_bytes - 1e9)
 
