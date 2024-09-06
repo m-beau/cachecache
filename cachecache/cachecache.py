@@ -284,7 +284,7 @@ def distributed_cacher(
             if datapath_arg_name in arg_kwargs:
                 datapath = arg_kwargs[datapath_arg_name]
                 # if passed datapath is a sensible path
-                if isinstance(datapath, Union[str, Path]):
+                if isinstance(datapath, , (str, Path)):
                     new_cache_path = Path(datapath) / local_cache_path
                     # if 'cache_path' also passed to function,
                     # cache_path still prevails.
