@@ -9,6 +9,7 @@ import psutil
 import inspect
 
 from cachecache.CONFIG import default_cache_path
+from cachecache.utils import is_writable
 
 
 def make_arg_kwargs_dic(func, args, kwargs):
@@ -236,19 +237,6 @@ class Cacher:
 
         return cached_func
 
-    def is_writable(self,
-                    path: Union[str, Path]) -> bool:
-        """Check if the given path is writable without creating it."""
-        if isinstance(path, str):
-                path = Path(path)
-        if path.exists():
-            return os.access(path, os.W_OK)
-        elif path.parent.exists():
-            return os.access(path.parent, os.W_OK)
-        else:
-            print("WARNING {path.parent} does not exist - caching aborted.")
-            return False
-
     def instanciate_joblib_cache(
         self,
         path: int,
@@ -272,7 +260,9 @@ class Cacher:
             )
             raise ValueError(error)
         
-        if not self.is_writable(path):
+        if not is_writable(path, required_space_mb = 10):
+            print((f"\n\nPath '{path}' not writable - caching by cachecache will be skipped. "
+                    "\nPossible causes: permission error; <10MB left on device.\n\n"))
             return None
 
         path.mkdir(exist_ok=True)
