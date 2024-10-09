@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 import functools
-import threading
 from typing import Union, Optional
 
 from joblib import Memory
@@ -149,7 +147,6 @@ class Cacher:
             cache_path, caching_memory_allocation
         )
         self.input_caching_memory_allocation = caching_memory_allocation
-        self._lock = threading.Lock()
 
     def __repr__(self):
         path = self.global_cache_memory.__repr__().split("=")[-1][:-1]
@@ -196,42 +193,40 @@ class Cacher:
             if not cache_results:
                 return func_to_cache(*args, **kwargs)
 
-            # Ensure thread-safe cache operations
-            with self._lock:
-                # Define cache, global or custom
-                if cache_path is None:
-                    cache_memory = self.global_cache_memory
-                else:
-                    # no way to customize the allocated cache memory for cache initialized at function run time
-                    cache_memory = self.instanciate_joblib_cache(
-                        cache_path, caching_memory_allocation=None
-                    )
-                
-                # If path not writable, cache_memory will be None
-                # so return the function unaltered
-                if cache_memory is None:
-                    return func_to_cache(*args, **kwargs)
-
-                # Cache function, ignoring arguments that alter caching behavior
-                # only if they exist in the function signature
-                arg_kwargs = make_arg_kwargs_dic(func_to_cache, args, kwargs)
-                arguments_to_ignore = [
-                    k for k in ["again", "cache_results", "cache_path"] if k in arg_kwargs
-                ]
-                func_to_cache_cached = cache_memory.cache(
-                    func_to_cache, ignore=arguments_to_ignore
+            # Define cache, global or custom
+            if cache_path is None:
+                cache_memory = self.global_cache_memory
+            else:
+                # no way to customize the allocated cache memory for cache initialized at function run time
+                cache_memory = self.instanciate_joblib_cache(
+                    cache_path, caching_memory_allocation=None
                 )
+            
+            # If path not writable, cache_memory will be None
+            # so return the function unaltered
+            if cache_memory is None:
+                return func_to_cache(*args, **kwargs)
 
-                # Reload or recompute results
-                mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
+            # Cache function, ignoring arguments that alter caching behavior
+            # only if they exist in the function signature
+            arg_kwargs = make_arg_kwargs_dic(func_to_cache, args, kwargs)
+            arguments_to_ignore = [
+                k for k in ["again", "cache_results", "cache_path"] if k in arg_kwargs
+            ]
+            func_to_cache_cached = cache_memory.cache(
+                func_to_cache, ignore=arguments_to_ignore
+            )
 
-                # If again is True, clear the cache to enforce recomputing the results
-                if again:
-                    mem.clear()
+            # Reload or recompute results
+            mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
 
-                # Reload results (or recompute them if again was True)
-                mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
-                results = mem.get()
+            # If again is True, clear the cache to enforce recomputing the results
+            if again:
+                mem.clear()
+
+            # Reload results (or recompute them if again was True)
+            mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
+            results = mem.get()
 
             return results
 
