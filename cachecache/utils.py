@@ -12,7 +12,7 @@ def has_write_permission(path: Union[str, Path]) -> bool:
     elif path.parent.exists():
         return os.access(path.parent, os.W_OK)
     else:
-        print(f"WARNING {path.parent} does not exist - caching aborted.")
+        print(f"WARNING: {path} or its parent does not exist - cannot assess write permissions.")
         return False
     
 def has_space_left(path: Union[str, Path],
@@ -32,12 +32,18 @@ def has_space_left(path: Union[str, Path],
     bool
         True if there's enough free space, False otherwise.
     """
-    try:
+    if isinstance(path, str):
+            path = Path(path)
+    if path.exists():
         _, _, free = shutil.disk_usage(path)
         free_space_mb = free / (1024 * 1024)  # Convert bytes to megabytes
         return free_space_mb >= required_space_mb
-    except OSError as e:
-        print(f"Error checking space at {path}: {e}")
+    elif path.parent.exists():
+        _, _, free = shutil.disk_usage(path.parent)
+        free_space_mb = free / (1024 * 1024)  # Convert bytes to megabytes
+        return free_space_mb >= required_space_mb
+    else:
+        print(f"WARNING: {path} or its parent does not exist - cannot check leftover space.")
         return False
 
 def is_writable(path: Union[str, Path],
