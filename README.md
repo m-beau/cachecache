@@ -39,13 +39,29 @@ from cachecache import cache, Cacher
 Cache using the default "~/.cachecache" directory and default maximum cache size:
 ```python
 @cache # behind the scenes, "cache" is simply defined as "cache = Cacher()"
-def my_cached_function(*args, again=False, cache_results=True, cache_path=None):
-    # complex operations involving args...
+def my_cached_function(x, y):
+    # complex operations...
     results = ...
     return results
 
 result = my_cached_function(arg)  # potentially slow
 result = my_cached_function(arg)  # always fast (results loaded from cache)
+```
+
+The caching control arguments `again`, `cache_results`, and `cache_path` are **automatically available** to any decorated function — no need to declare them in the function signature:
+```python
+result = my_cached_function(arg, again=True)               # recompute and overwrite cache
+result = my_cached_function(arg, cache_results=False)       # skip caching entirely
+result = my_cached_function(arg, cache_path="other/path")   # use a different cache directory
+```
+
+If you prefer, you can still declare them explicitly in the signature (they will then also be passed through to the function body):
+```python
+@cache
+def my_cached_function(x, y, again=False, cache_results=True, cache_path=None):
+    if again:
+        print("Recomputing!")
+    ...
 ```
 
 Cache using a custom directory and maximum cache size:
@@ -62,7 +78,7 @@ result = my_cached_function(arg, again=True)
 ```
 This proves useful if the results depend on data that can change on disk (this information is not present in the arguments of the function, so the cacher does not know about it!).
 
-Adjust caching directory at runtime
+Adjust caching directory at runtime:
 ```python
 result = my_cached_function(arg, cache_path="somewhere/else")
 ```

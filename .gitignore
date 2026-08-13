@@ -5,9 +5,11 @@ __pycache__/
 *swp
 .*.sw*
 *~
-cachecache.egg-info/*
-dist/*
-build/*
+cachecache.egg-info/
+*.egg-info/
+dist/
+build/
+.venv/
 spk_wvf2.py
 .vscode/*
 .DS_Store

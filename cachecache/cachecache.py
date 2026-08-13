@@ -31,11 +31,18 @@ def make_arg_kwargs_dic(func, args, kwargs):
     sig = inspect.signature(func)
 
     # Identify all positional and keyword arguments
-    arg_kwarg_names = [param.name for param in sig.parameters.values()]
-    wrong_kwargs = [name for name in kwargs.keys() if name not in arg_kwarg_names]
-    assert (
-        len(wrong_kwargs) == 0
-    ), f"{func.__name__}() got >=1 unexpected keyword argument(s): {wrong_kwargs}"
+    has_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+        )
+    arg_kwarg_names = [
+        param.name for param in sig.parameters.values()
+        if param.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    ]
+    if not has_var_keyword:
+        wrong_kwargs = [name for name in kwargs.keys() if name not in arg_kwarg_names]
+        assert (
+            len(wrong_kwargs) == 0
+        ), f"{func.__name__}() got >=1 unexpected keyword argument(s): {wrong_kwargs}"
 
     # Add arguments PASSED as positional arguments, in args
     # (they can be defined either as positional or keyword arguments!)
@@ -83,22 +90,24 @@ class Cacher:
         # for caching at the default "~/.cachecache",
         # with a default maximum cache size of "all available space minus 5GB"
         @cache
+        def my_cached_function(*args):
+            # complex operations involving args...
+            results = ...
+            return results
+
+        # again, cache_results, cache_path are automatically available
+        # to the caller even without declaring them:
+        result = my_cached_function(arg, again=True)
+        result = my_cached_function(arg, cache_path="somewhere/else")
+
+        # Optionally, they can still be declared explicitly in the signature
+        # (they will then also be passed through to the function body):
+        @cache
         def my_cached_function(*args,
                                again = False,
                                cache_results = True,
                                cache_path = None):
-            '''
-            Arguments that will alter @Cacher() caching behaviour at run time:
-            - again: bool, whether to recompute and overwrite the cached results
-                     (if False, loads from cache if found in cache)
-            - cache_results: bool, whether to cache the results
-                             (if False, does not attempt to load form cache either)
-            - cache_path: None|str, set alternative path to cache directory at run time
-            '''
-
-            # complex operations involving args...
-            results = ...
-
+            ...
             return results
 
         # for caching at "my/custom/caching/path",
@@ -161,6 +170,9 @@ class Cacher:
         "Calling cacher returns the decorated (cached) function."
         return self._decorator(func)
 
+    # Cache-control arguments that the decorator manages
+    _CACHE_CONTROL_ARGS = {"again", "cache_results", "cache_path"}
+
     def _decorator(self, func_to_cache):
         """
         Decorator to cache any function at cache_path,
@@ -173,6 +185,10 @@ class Cacher:
             - cache_results: bool, whether to cache the computed results
                              (if False, does not attempt to load form cache either)
             - cache_path: None|str, set alternative path to cache directory at run time
+
+        These arguments are automatically available to callers even if not
+        explicitly declared in the function signature. If declared, they are
+        also passed through to the function.
         """
         assert callable(func_to_cache), f"{func_to_cache} is not callable!"
 
@@ -180,6 +196,11 @@ class Cacher:
         # for functions defined inside ipython sessions (e.g. jupyter notebook)
         if '__main__' in func_to_cache.__module__:
             func_to_cache.__module__ = 'cachecache_persistent'
+
+        # Determine which cache-control args the function explicitly accepts
+        sig = inspect.signature(func_to_cache)
+        func_params = set(sig.parameters.keys())
+        injected_args = self._CACHE_CONTROL_ARGS - func_params
 
         @functools.wraps(func_to_cache)
         def cached_func(*args, **kwargs):
@@ -189,9 +210,12 @@ class Cacher:
             again = kwargs.get("again", False)
             cache_path = kwargs.get("cache_path", None)
 
+            # Strip cache-control args not declared by the function
+            clean_kwargs = {k: v for k, v in kwargs.items() if k not in injected_args}
+
             # If cache_results is False, return the function unaltered
             if not cache_results:
-                return func_to_cache(*args, **kwargs)
+                return func_to_cache(*args, **clean_kwargs)
 
             # Define cache, global or custom
             if cache_path is None:
@@ -201,31 +225,28 @@ class Cacher:
                 cache_memory = self.instanciate_joblib_cache(
                     cache_path, caching_memory_allocation=None
                 )
-            
+
             # If path not writable, cache_memory will be None
             # so return the function unaltered
             if cache_memory is None:
-                return func_to_cache(*args, **kwargs)
+                return func_to_cache(*args, **clean_kwargs)
 
             # Cache function, ignoring arguments that alter caching behavior
             # only if they exist in the function signature
-            arg_kwargs = make_arg_kwargs_dic(func_to_cache, args, kwargs)
             arguments_to_ignore = [
-                k for k in ["again", "cache_results", "cache_path"] if k in arg_kwargs
+                k for k in self._CACHE_CONTROL_ARGS if k in func_params
             ]
             func_to_cache_cached = cache_memory.cache(
                 func_to_cache, ignore=arguments_to_ignore
             )
 
-            # Reload or recompute results
-            mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
-
-            # If again is True, clear the cache to enforce recomputing the results
+            # If again is True, clear existing cached results
             if again:
+                mem = func_to_cache_cached.call_and_shelve(*args, **clean_kwargs)
                 mem.clear()
 
-            # Reload results (or recompute them if again was True)
-            mem = func_to_cache_cached.call_and_shelve(*args, **kwargs)
+            # Compute or load from cache
+            mem = func_to_cache_cached.call_and_shelve(*args, **clean_kwargs)
             results = mem.get()
 
             return results
@@ -234,7 +255,7 @@ class Cacher:
 
     def instanciate_joblib_cache(
         self,
-        path: int,
+        path: Union[str, Path],
         caching_memory_allocation: Union[int, None] = None
     ):
         """
@@ -269,6 +290,11 @@ class Cacher:
         free_memory_bytes = psutil.disk_usage(str(path)).free
         if caching_memory_allocation is None:
             caching_memory_allocation = int(free_memory_bytes - 1e9)
+
+        if free_memory_bytes <= 0:
+            raise ValueError(
+                f"WARNING no free space at {str(path)} - caching will not be possible."
+            )
 
         if free_memory_bytes * 1e-9 < 5:
             print(
@@ -343,10 +369,20 @@ def distributed_cacher(
     def decorator(func):
         "Simple nested wrapper allowing to pass arguments to @distributed_cacher."
 
+        # decorate once at definition time
+        cached_func = global_cache(func)  # same as decorating func with @cache
+
+        # Determine which cache-control args the function does NOT explicitly accept
+        sig = inspect.signature(func)
+        func_params = set(sig.parameters.keys())
+        injected_args = Cacher._CACHE_CONTROL_ARGS - func_params
+
         @functools.wraps(func)
         def locally_cached_func(*args, **kwargs):
 
-            arg_kwargs = make_arg_kwargs_dic(func, args, kwargs)
+            # Strip injected cache-control args before inspecting the function's own args
+            func_kwargs = {k: v for k, v in kwargs.items() if k not in injected_args}
+            arg_kwargs = make_arg_kwargs_dic(func, args, func_kwargs)
 
             # replace the cache_path argument
             # with f'{datapath_arg_name}/{local_cache_path}'
@@ -363,10 +399,7 @@ def distributed_cacher(
                     else:
                         kwargs["cache_path"] = new_cache_path
 
-            cached_func = global_cache(func)  # same as decorating func with @cache
-            results = cached_func(*args, **kwargs)
-
-            return results
+            return cached_func(*args, **kwargs)
 
         return locally_cached_func
 

@@ -49,4 +49,4 @@ def has_space_left(path: Union[str, Path],
 def is_writable(path: Union[str, Path],
                 required_space_mb: float = 100) -> bool:
     
-    return has_space_left(path, required_space_mb) & has_write_permission(path)
+    return has_space_left(path, required_space_mb) and has_write_permission(path)
