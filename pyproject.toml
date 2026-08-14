@@ -1,6 +1,6 @@
 [project]
 name = "cachecache"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python package for easy function caching, allowing users to customize cache behavior at call-time."
 readme = "README.md"
 license = "GPL-3.0-only"
