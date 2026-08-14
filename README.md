@@ -2,27 +2,51 @@
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 [![Downloads](https://static.pepy.tech/badge/cachecache)](https://pepy.tech/project/cachecache)
 
-# cachecache: Python function decorator for runtime-configurable caching.</h1> <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="Neuropyxels" alt="Neuropixels" align="right" vspace = "50">
+# cachecache <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="cachecache" alt="cachecache" align="right" vspace = "50">
 
-A Python package that provides a simple way to cache function results while allowing to dynamically configure caching behavior at each function call.
+A simple decorator to cache the results of your Python functions on disk, built on [joblib.Memory](https://joblib.readthedocs.io/en/latest/generated/joblib.Memory.html).
 
-By "caching behavior" reconfigurable at each function call, we mean:
-1) Whether to recompute results and overwrite the cache, which is useful for functions whose results rely on data loaded internally (therefore hidden from the function arguments, thus from the cache hash) and that can change on disk;
-2) Whether to cache the results, which is useful for functions who may need caching in context A (e.g. frontend recurrent use) but not context B (e.g. backend unique use);
-3) Where to save the cached results, which is useful for functions that return voluminous data, as this allows to distribute their cache across several locations given different arguments.
+```python
+from cachecache import cache
 
-## Features
+@cache
+def my_function(arg1, arg2, arg3, ...):
+    ...  # expensive computation
 
-- 1-liner caching with a decorator: @cache
-- Caching behavior can be customized on the fly for specific function calls, by passing the following arguments to the cached functions:
-    - 🔄 `again=True`: recompute and overwrite cached results on-demand
-    - ⏸️ `cache_results=False`: disable caching for specific function calls, for instance if the computed result would take too much room on disk.
-    - 📁 `cache_path='different/caching/path'`: use custom cache locations for specific function calls
-- Built on joblib's [Memory](https://joblib.readthedocs.io/en/latest/generated/joblib.Memory.html) class.
+result = my_function("some/path", [1,2,3], 4)  # potentially slow the first time
+result = my_function("some/path", [1,2,3], 4)  # same inputs -> instant from now on
+result = my_function("some/path", [1,2,3], 4, again=True)  # recompute and overwrite cache, useful if data at some/path changed
+result = my_function("some/path", [1,2,3], 4, cache_path="path/to/dir/with/space") # cache to a different location
+```
+
+## Why cachecache over raw joblib?
+
+We built cachecache to address joblib's `Memory` lack of user-friendliness, especially in interactive workflows:
+
+- **It works across interactive sessions (e.g. Jupyter notebooks reloads).** joblib caching tends to break on functions defined inside notebooks, because the cache directory gets redefined every time you restart the kernel. With cachecache, your cache persists across sessions.
+- **Caching behavior is configurable at function call time.** Every `@cache`-decorated function implicitly accepts extra arguments to alter how caching works, without any changes to the function signature:
+    - `again=True` — recompute and overwrite a stale cache (useful when underlying data changed on disk, which the cache hash can't detect yet is very frequent in interactive data exploration)
+    - `cache_results=False` — skip caching for a specific call (useful when the result would be too large to store)
+    - `cache_path="other/path"` — cache to a different location (useful to distribute cache across disks)
+- **Distributed caching.** Cache a function's results next to the data it operates on (e.g. at `datapath/.local_cache`), so the cache lives where the data lives, rather than in a single global cache (likely to overfill). Joblib does not support this use case, which is very common in data analysis workflows.
 
 ## Installation
 
-You can install `cachecache` using pip:
+Using [uv](https://docs.astral.sh/uv/) (recommended):
+
+```bash
+uv pip install cachecache
+```
+
+Or from a local git clone:
+
+```bash
+git clone https://github.com/m-beau/cachecache.git
+cd cachecache
+uv pip install .
+```
+
+Using pip:
 
 ```bash
 pip install cachecache
@@ -30,15 +54,13 @@ pip install cachecache
 
 ## Usage
 
-Here's a basic example of how to use `cachecache`:
-
 ```python
 from cachecache import cache, Cacher
 ```
 
-Cache using the default "~/.cachecache" directory and default maximum cache size:
+By default, results are cached in `~/.cachecache`:
 ```python
-@cache # behind the scenes, "cache" is simply defined as "cache = Cacher()"
+@cache # behind the scenes, "cache" is simply defined as "cache = Cacher()", which defaults to "~/.cachecache"
 def my_cached_function(x, y):
     # complex operations...
     results = ...
@@ -48,19 +70,20 @@ result = my_cached_function(arg)  # potentially slow
 result = my_cached_function(arg)  # always fast (results loaded from cache)
 ```
 
-The caching control arguments `again`, `cache_results`, and `cache_path` are **automatically available** to any decorated function — no need to declare them in the function signature:
+The caching control arguments `again`, `cache_results`, and `cache_path` are **automatically injected** to any decorated function — no need to declare them in the function signature:
 ```python
 result = my_cached_function(arg, again=True)               # recompute and overwrite cache
 result = my_cached_function(arg, cache_results=False)       # skip caching entirely
 result = my_cached_function(arg, cache_path="other/path")   # use a different cache directory
 ```
 
-If you prefer, you can still declare them explicitly in the signature (they will then also be passed through to the function body):
+If you prefer, you can still declare them explicitly when you define the function (e.g. if you want to implement custom behavior depending on these arguments):
 ```python
 @cache
 def my_cached_function(x, y, again=False, cache_results=True, cache_path=None):
     if again:
         print("Recomputing!")
+    print(f"Caching path: {cache_path}")
     ...
 ```
 
@@ -71,6 +94,7 @@ cacher = Cacher("my/custom/caching/path", 10e9) # size in bytes - 10GB
 def my_cached_function(...):
     ...
 ```
+When the cache exceeds its size limit, the least recently accessed items are evicted first. By default (when no limit is specified), cachecache allows caching up to all available disk space minus 1 GB, and will print a warning when less than 5 GB remain at the cache location.
 
 Recompute results and overwrite cache:
 ```python
@@ -144,4 +168,4 @@ This project is licensed under the terms of the [GNU General Public License v3.0
 
 ## Support
 
-If you have any questions, issues, or feature requests, please [open an issue](https://github.com/m-beau/cachecache/issues) so that everybody can benefit from your experience! This package is actively maintained.
+If you have any questions, issues, or feature requests, please [open an issue](https://github.com/m-beau/cachecache/issues) so that everybody can benefit from your experience! This package is actively maintained by Maxime Beau.
