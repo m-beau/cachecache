@@ -4,9 +4,9 @@
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 [![Downloads](https://static.pepy.tech/badge/cachecache)](https://pepy.tech/project/cachecache)
 
-# cachecache <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="cachecache" alt="cachecache" align="right" vspace = "50">
+# cachecache: Python function decorator for runtime-configurable caching. <img src="https://raw.githubusercontent.com/m-beau/cachecache/master/images/cachecache.png" width="150" title="cachecache" alt="cachecache" align="right" vspace = "50">
 
-A simple decorator to cache the results of your Python functions on disk, built on [joblib.Memory](https://joblib.readthedocs.io/en/latest/generated/joblib.Memory.html).
+A simple decorator to cache the results of your Python functions on disk and dynamically configure caching behavior at each function call, built on [joblib.Memory](https://joblib.readthedocs.io/en/latest/generated/joblib.Memory.html).
 
 ```python
 from cachecache import cache
