@@ -1,4 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/cachecache.svg)](https://badge.fury.io/py/cachecache)
+[![Tests](https://github.com/m-beau/cachecache/actions/workflows/tests.yml/badge.svg)](https://github.com/m-beau/cachecache/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/m-beau/cachecache/branch/master/graph/badge.svg)](https://codecov.io/gh/m-beau/cachecache)
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)](https://opensource.org/license/gpl-3-0)
 [![Downloads](https://static.pepy.tech/badge/cachecache)](https://pepy.tech/project/cachecache)
 
