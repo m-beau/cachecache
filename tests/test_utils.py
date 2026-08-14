@@ -1,6 +1,9 @@
 import os
+import sys
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from cachecache.utils import has_write_permission, has_space_left, is_writable
 
@@ -22,6 +25,7 @@ class TestHasWritePermission:
         # Remove the parent to simulate missing parent
         assert has_write_permission(nonexistent / "deep") is False
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="chmod not effective on Windows")
     def test_existing_non_writable_path(self, tmp_path):
         readonly = tmp_path / "readonly"
         readonly.mkdir()
@@ -62,6 +66,7 @@ class TestIsWritable:
     def test_not_writable_no_space(self, tmp_path):
         assert is_writable(tmp_path, required_space_mb=1e12) is False
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="chmod not effective on Windows")
     def test_not_writable_no_permission(self, tmp_path):
         readonly = tmp_path / "readonly"
         readonly.mkdir()
